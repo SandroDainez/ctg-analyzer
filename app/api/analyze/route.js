@@ -3,17 +3,15 @@ export const runtime = "edge";
 export async function POST(request) {
   try {
     const { image, mimeType } = await request.json();
-
     if (!image || !mimeType) {
       return Response.json({ error: "Imagem não fornecida." }, { status: 400 });
     }
-
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
       return Response.json({ error: "Chave de API não configurada." }, { status: 500 });
     }
 
-    const prompt = `Voce e um especialista em obstetricia com vasta experiencia em cardiotocografia CTG. A imagem enviada E um tracado de CTG. Pode ser foto de papel impresso, screenshot de monitor, imagem com baixa resolucao ou angulo imperfeito. Mesmo que a qualidade seja ruim, faca sua melhor analise. NUNCA diga que a imagem nao e um CTG - sempre interprete o que ve. A linha superior representa a frequencia cardiaca fetal FCF normalmente entre 110-160 bpm. A linha inferior representa as contracoes uterinas. Retorne APENAS um JSON valido sem texto adicional: {"classificacao":"Normal","parametros":{"fcf_basal":{"valor":"estimativa","status":"ok"},"variabilidade":{"valor":"descricao","status":"ok"},"aceleracoes":{"valor":"descricao","status":"ok"},"desaceleracoes":{"valor":"descricao","status":"ok"},"movimentos_fetais":{"valor":"descricao","status":"ok"}},"achados":[{"texto":"achado","tipo":"ok"}],"conclusao":"interpretacao em 2-3 frases FIGO 2015"}. Status pode ser ok warn ou bad. Classificacao pode ser Normal Suspeito ou Patologico. Se qualidade limitou a analise mencione na conclusao mas forneca sua impressao clinica.`;
+    const prompt = `You are an obstetrics expert analyzing a cardiotocography (CTG) trace. The image IS a CTG trace - always analyze it even if quality is poor. The top line is fetal heart rate (FHR, normal 110-160 bpm), the bottom line is uterine contractions. Return ONLY valid JSON, no extra text: {"classificacao":"Normal","parametros":{"fcf_basal":{"valor":"estimate in bpm","status":"ok"},"variabilidade":{"valor":"description","status":"ok"},"aceleracoes":{"valor":"description","status":"ok"},"desaceleracoes":{"valor":"description","status":"ok"},"movimentos_fetais":{"valor":"description","status":"ok"}},"achados":[{"texto":"finding","tipo":"ok"}],"conclusao":"clinical interpretation 2-3 sentences FIGO 2015"}. Status values: ok, warn, bad. Classificacao values: Normal, Suspeito, Patologico. Write all text fields in Brazilian Portuguese.`;
 
     const body = {
       model: "gpt-4o",
@@ -41,13 +39,16 @@ export async function POST(request) {
 
     const data = await openaiRes.json();
     const text = data.choices?.[0]?.message?.content || "";
-    const clean = text.replace(/```json|```/g, "").trim();
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) {
+      return Response.json({ error: "Resposta invalida da IA. Tente novamente." }, { status: 500 });
+    }
 
     let result;
     try {
-      result = JSON.parse(clean);
+      result = JSON.parse(match[0]);
     } catch {
-      return Response.json({ error: "Resposta invalida da IA. Tente novamente." }, { status: 500 });
+      return Response.json({ error: "Erro ao processar resposta. Tente novamente." }, { status: 500 });
     }
 
     return Response.json(result);
