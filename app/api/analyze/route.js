@@ -13,56 +13,24 @@ export async function POST(request) {
       return Response.json({ error: "Chave de API não configurada." }, { status: 500 });
     }
 
-    const prompt = `Você é um especialista em obstetrícia analisando um traçado de cardiotocografia (CTG).
-Analise a imagem fornecida e retorne APENAS um JSON válido com a seguinte estrutura, sem nenhum texto adicional:
-
-{
-  "classificacao": "Normal" | "Suspeito" | "Patológico" | "Não identificado",
-  "parametros": {
-    "fcf_basal": { "valor": "string com bpm ou nao visivel", "status": "ok" | "warn" | "bad" },
-    "variabilidade": { "valor": "string descritiva", "status": "ok" | "warn" | "bad" },
-    "aceleracoes": { "valor": "string descritiva", "status": "ok" | "warn" | "bad" },
-    "desaceleracoes": { "valor": "string descritiva", "status": "ok" | "warn" | "bad" },
-    "movimentos_fetais": { "valor": "string ou nao visivel", "status": "ok" | "warn" | "bad" }
-  },
-  "achados": [
-    { "texto": "descricao do achado", "tipo": "ok" | "warn" | "bad" }
-  ],
-  "conclusao": "Texto de conclusao clinica em 2-3 frases com interpretacao segundo criterios FIGO 2015."
-}
-
-Se a imagem nao for um tracado de CTG, defina classificacao como Nao identificado e explique na conclusao.
-Retorne SOMENTE o JSON, sem markdown, sem explicacoes extras.`;
+    const prompt = `Voce e um especialista em obstetricia com vasta experiencia em cardiotocografia CTG. A imagem enviada E um tracado de CTG. Pode ser foto de papel impresso, screenshot de monitor, imagem com baixa resolucao ou angulo imperfeito. Mesmo que a qualidade seja ruim, faca sua melhor analise. NUNCA diga que a imagem nao e um CTG - sempre interprete o que ve. A linha superior representa a frequencia cardiaca fetal FCF normalmente entre 110-160 bpm. A linha inferior representa as contracoes uterinas. Retorne APENAS um JSON valido sem texto adicional: {"classificacao":"Normal","parametros":{"fcf_basal":{"valor":"estimativa","status":"ok"},"variabilidade":{"valor":"descricao","status":"ok"},"aceleracoes":{"valor":"descricao","status":"ok"},"desaceleracoes":{"valor":"descricao","status":"ok"},"movimentos_fetais":{"valor":"descricao","status":"ok"}},"achados":[{"texto":"achado","tipo":"ok"}],"conclusao":"interpretacao em 2-3 frases FIGO 2015"}. Status pode ser ok warn ou bad. Classificacao pode ser Normal Suspeito ou Patologico. Se qualidade limitou a analise mencione na conclusao mas forneca sua impressao clinica.`;
 
     const body = {
       model: "gpt-4o",
       max_tokens: 1000,
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "image_url",
-              image_url: {
-                url: `data:${mimeType};base64,${image}`,
-              },
-            },
-            {
-              type: "text",
-              text: prompt,
-            },
-          ],
-        },
-      ],
+      messages: [{
+        role: "user",
+        content: [
+          { type: "image_url", image_url: { url: `data:${mimeType};base64,${image}`, detail: "high" } },
+          { type: "text", text: prompt }
+        ]
+      }]
     };
 
     const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify(body),
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify(body)
     });
 
     if (!openaiRes.ok) {
