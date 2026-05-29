@@ -11,8 +11,11 @@ export default function CTGAnalyzer() {
   const fileInputRef = useRef(null);
 
   function loadFile(file) {
-    if (!file || !file.type.startsWith("image/")) return;
-    setMimeType(file.type);
+  if (!file) return;
+  const mime = file.type || "image/jpeg";
+  const safeMime = mime === "image/heic" || mime === "image/heif" ? "image/jpeg" : mime;
+  if (!safeMime.startsWith("image/")) return;
+  setMimeType(safeMime);
     const reader = new FileReader();
     reader.onload = (e) => {
       setImage(e.target.result);
