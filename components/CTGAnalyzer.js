@@ -11,17 +11,46 @@ export default function CTGAnalyzer() {
   const fileInputRef = useRef(null);
 
   function loadFile(file) {
-  if (!file) return;
-  const mime = file.type || "image/jpeg";
-  const safeMime = mime === "image/heic" || mime === "image/heif" ? "image/jpeg" : mime;
-  if (!safeMime.startsWith("image/")) return;
-  setMimeType(safeMime);
+    if (!file) return;
+    const mime = file.type || "image/jpeg";
+    const isHeic = mime === "image/heic" || mime === "image/heif" || mime === "";
+    if (!mime.startsWith("image/") && !isHeic) return;
+
     const reader = new FileReader();
     reader.onload = (e) => {
-      setImage(e.target.result);
-      setImageBase64(e.target.result.split(",")[1]);
-      setResult(null);
-      setError(null);
+      const originalDataUrl = e.target.result;
+
+      if (isHeic) {
+        // Re-encode via canvas to get real JPEG bytes (iOS can decode HEIC natively)
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          canvas.getContext("2d").drawImage(img, 0, 0);
+          const jpegDataUrl = canvas.toDataURL("image/jpeg", 0.92);
+          setImage(jpegDataUrl);
+          setImageBase64(jpegDataUrl.split(",")[1]);
+          setMimeType("image/jpeg");
+          setResult(null);
+          setError(null);
+        };
+        img.onerror = () => {
+          // Fallback: send as-is and hope for the best
+          setImage(originalDataUrl);
+          setImageBase64(originalDataUrl.split(",")[1]);
+          setMimeType("image/jpeg");
+          setResult(null);
+          setError(null);
+        };
+        img.src = originalDataUrl;
+      } else {
+        setImage(originalDataUrl);
+        setImageBase64(originalDataUrl.split(",")[1]);
+        setMimeType(mime);
+        setResult(null);
+        setError(null);
+      }
     };
     reader.readAsDataURL(file);
   }

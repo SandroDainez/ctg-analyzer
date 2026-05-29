@@ -68,15 +68,21 @@ Write ALL text fields in Brazilian Portuguese.`;
 
     const data = await openaiRes.json();
     const text = data.choices?.[0]?.message?.content || "";
-    const match = text.match(/\{[\s\S]*\}/);
+    console.log("[CTG] OpenAI raw response:", text);
+
+    // Strip markdown code fences if present, then extract first JSON object
+    const stripped = text.replace(/```(?:json)?\s*/gi, "").replace(/```/g, "");
+    const match = stripped.match(/\{[\s\S]*\}/);
     if (!match) {
+      console.error("[CTG] No JSON found in response:", text);
       return Response.json({ error: "Resposta invalida da IA. Tente novamente." }, { status: 500 });
     }
 
     let result;
     try {
       result = JSON.parse(match[0]);
-    } catch {
+    } catch (parseErr) {
+      console.error("[CTG] JSON parse error:", parseErr, "| extracted:", match[0]);
       return Response.json({ error: "Erro ao processar resposta. Tente novamente." }, { status: 500 });
     }
 
