@@ -54,8 +54,9 @@ export default function CTGAnalyzer() {
         body: JSON.stringify({ image: imageBase64, mimeType }),
       });
       const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      setResult(data);
+if (data.error) throw new Error(data.error);
+if (!data.classificacao) throw new Error("Resposta incompleta. Tente novamente.");
+setResult(data);
     } catch (err) {
       setError(err.message || "Erro ao analisar. Tente novamente.");
     } finally {
