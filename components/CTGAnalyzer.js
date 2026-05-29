@@ -13,44 +13,39 @@ export default function CTGAnalyzer() {
   function loadFile(file) {
     if (!file) return;
     const mime = file.type || "image/jpeg";
-    const isHeic = mime === "image/heic" || mime === "image/heif" || mime === "";
-    if (!mime.startsWith("image/") && !isHeic) return;
+    if (!mime.startsWith("image/") && mime !== "") return;
 
     const reader = new FileReader();
     reader.onload = (e) => {
       const originalDataUrl = e.target.result;
-
-      if (isHeic) {
-        // Re-encode via canvas to get real JPEG bytes (iOS can decode HEIC natively)
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement("canvas");
-          canvas.width = img.naturalWidth;
-          canvas.height = img.naturalHeight;
-          canvas.getContext("2d").drawImage(img, 0, 0);
-          const jpegDataUrl = canvas.toDataURL("image/jpeg", 0.92);
-          setImage(jpegDataUrl);
-          setImageBase64(jpegDataUrl.split(",")[1]);
-          setMimeType("image/jpeg");
-          setResult(null);
-          setError(null);
-        };
-        img.onerror = () => {
-          // Fallback: send as-is and hope for the best
-          setImage(originalDataUrl);
-          setImageBase64(originalDataUrl.split(",")[1]);
-          setMimeType("image/jpeg");
-          setResult(null);
-          setError(null);
-        };
-        img.src = originalDataUrl;
-      } else {
-        setImage(originalDataUrl);
-        setImageBase64(originalDataUrl.split(",")[1]);
-        setMimeType(mime);
+      const img = new Image();
+      img.onload = () => {
+        // Resize to max 1600px — keeps payload under ~1.5MB, avoiding iOS fetch body limit
+        const MAX = 1600;
+        let { naturalWidth: w, naturalHeight: h } = img;
+        if (w > MAX || h > MAX) {
+          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+          else { w = Math.round(w * MAX / h); h = MAX; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        const jpegDataUrl = canvas.toDataURL("image/jpeg", 0.88);
+        setImage(jpegDataUrl);
+        setImageBase64(jpegDataUrl.split(",")[1]);
+        setMimeType("image/jpeg");
         setResult(null);
         setError(null);
-      }
+      };
+      img.onerror = () => {
+        setImage(originalDataUrl);
+        setImageBase64(originalDataUrl.split(",")[1]);
+        setMimeType("image/jpeg");
+        setResult(null);
+        setError(null);
+      };
+      img.src = originalDataUrl;
     };
     reader.readAsDataURL(file);
   }
