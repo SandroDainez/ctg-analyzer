@@ -11,11 +11,40 @@ export async function POST(request) {
       return Response.json({ error: "Chave de API não configurada." }, { status: 500 });
     }
 
-    const prompt = `You are an obstetrics expert analyzing a cardiotocography (CTG) trace. The image IS a CTG trace - always analyze it even if quality is poor. The top line is fetal heart rate (FHR, normal 110-160 bpm), the bottom line is uterine contractions. Return ONLY valid JSON, no extra text: {"classificacao":"Normal","parametros":{"fcf_basal":{"valor":"estimate in bpm","status":"ok"},"variabilidade":{"valor":"description","status":"ok"},"aceleracoes":{"valor":"description","status":"ok"},"desaceleracoes":{"valor":"description","status":"ok"},"movimentos_fetais":{"valor":"description","status":"ok"}},"achados":[{"texto":"finding","tipo":"ok"}],"conclusao":"clinical interpretation 2-3 sentences FIGO 2015"}. Status values: ok, warn, bad. Classificacao values: Normal, Suspeito, Patologico. Write all text fields in Brazilian Portuguese.`;
+    const prompt = `You are an expert obstetrician analyzing a cardiotocography (CTG) trace. The image IS a CTG trace - always analyze it even if quality is poor. Never say it is not a CTG. The top line is fetal heart rate (FHR, normal 110-160 bpm), the bottom line is uterine contractions.
+
+Classify using THREE international systems simultaneously:
+- FIGO 2015: Normal / Suspicious / Pathological
+- ACOG 2023: Category I / Category II / Category III
+- FEBRASGO: Normal / Suspeito / Patologico
+
+Return ONLY valid JSON, no markdown, no extra text:
+{
+  "classificacao": "Normal",
+  "classificacao_acog": "Category I",
+  "classificacao_febrasgo": "Normal",
+  "parametros": {
+    "fcf_basal": {"valor": "bpm estimate", "status": "ok"},
+    "variabilidade": {"valor": "description", "status": "ok"},
+    "aceleracoes": {"valor": "description", "status": "ok"},
+    "desaceleracoes": {"valor": "description", "status": "ok"},
+    "movimentos_fetais": {"valor": "description", "status": "ok"}
+  },
+  "achados": [
+    {"texto": "finding", "tipo": "ok"}
+  ],
+  "conclusao": "Clinical interpretation 2-3 sentences comparing FIGO 2015, ACOG 2023 and FEBRASGO criteria."
+}
+
+Status values: ok, warn, bad.
+classificacao (FIGO): Normal, Suspeito, Patologico.
+classificacao_acog: Categoria I, Categoria II, Categoria III.
+classificacao_febrasgo: Normal, Suspeito, Patologico.
+Write ALL text fields in Brazilian Portuguese.`;
 
     const body = {
       model: "gpt-4o",
-      max_tokens: 1000,
+      max_tokens: 1200,
       messages: [{
         role: "user",
         content: [

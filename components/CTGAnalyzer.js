@@ -54,9 +54,9 @@ export default function CTGAnalyzer() {
         body: JSON.stringify({ image: imageBase64, mimeType }),
       });
       const data = await res.json();
-if (data.error) throw new Error(data.error);
-if (!data.classificacao) throw new Error("Resposta incompleta. Tente novamente.");
-setResult(data);
+      if (data.error) throw new Error(data.error);
+      if (!data.classificacao) throw new Error("Resposta incompleta. Tente novamente.");
+      setResult(data);
     } catch (err) {
       setError(err.message || "Erro ao analisar. Tente novamente.");
     } finally {
@@ -67,8 +67,8 @@ setResult(data);
   const verdictColor = {
     Normal: styles.verdictNormal,
     Suspeito: styles.verdictSuspeito,
+    "Patologico": styles.verdictPatologico,
     "Patológico": styles.verdictPatologico,
-    "Não identificado": styles.verdictNeutro,
   };
 
   const statusColor = { ok: styles.ok, warn: styles.warn, bad: styles.bad };
@@ -89,7 +89,7 @@ setResult(data);
           <div className={styles.badge}>Análise de CTG</div>
           <h1 className={styles.title}>Interpretador de Cardiotocografia</h1>
           <p className={styles.subtitle}>
-            Envie uma foto do traçado para análise automática pelos critérios FIGO 2015.
+            Análise automática pelos critérios FIGO 2015, ACOG 2023 e FEBRASGO.
           </p>
         </div>
 
@@ -137,9 +137,27 @@ setResult(data);
           <div className={styles.resultCard}>
             <div className={styles.resultHeader}>
               <span className={styles.resultTitle}>Resultado da análise</span>
-              <span className={`${styles.verdictBadge} ${verdictColor[result.classificacao] || styles.verdictNeutro}`}>
-                {result.classificacao}
-              </span>
+            </div>
+
+            <div className={styles.classGrid}>
+              <div className={styles.classItem}>
+                <div className={styles.classLabel}>FIGO 2015</div>
+                <span className={`${styles.verdictBadge} ${verdictColor[result.classificacao] || styles.verdictNeutro}`}>
+                  {result.classificacao}
+                </span>
+              </div>
+              <div className={styles.classItem}>
+                <div className={styles.classLabel}>ACOG 2023</div>
+                <span className={`${styles.verdictBadge} ${verdictColor[result.classificacao_acog] || styles.verdictNeutro}`}>
+                  {result.classificacao_acog || "—"}
+                </span>
+              </div>
+              <div className={styles.classItem}>
+                <div className={styles.classLabel}>FEBRASGO</div>
+                <span className={`${styles.verdictBadge} ${verdictColor[result.classificacao_febrasgo] || styles.verdictNeutro}`}>
+                  {result.classificacao_febrasgo || "—"}
+                </span>
+              </div>
             </div>
 
             <div className={styles.resultBody}>
